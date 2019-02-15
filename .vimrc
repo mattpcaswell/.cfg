@@ -24,7 +24,7 @@ call plug#end()
 " }}}
 "Colors and Fonts {{{
 syntax on     " Enable syntax hilighting
-colorscheme Gruvbox
+colorscheme gruvbox
 set background=dark
 
 set guifont=DejaVu\ Sans\ Mono\ for\ Powerline:h11
