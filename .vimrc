@@ -6,28 +6,27 @@ call plug#begin('~/vimfiles/bundle')
 Plug 'vim-airline/vim-airline'              " airline
 Plug 'vim-airline/vim-airline-themes'
 Plug 'kien/ctrlp.vim'                       " control p
-Plug 'tpope/vim-fugitive'                   " fugitive git
 Plug 'scrooloose/nerdtree'                  " nerd tree
 Plug 'tpope/vim-commentary'                 " commenting stuff (gc)
 Plug 'tpope/vim-surround'                   " surround. jesus tim pope is good
 Plug 'morhetz/gruvbox'                      " Gruvbox theme
-Plug 'w0rp/ale'                             " Async linter
 Plug 'raimondi/delimitmate'                 " auto close brackets, parentheses, ect...
-Plug 'airblade/vim-gitgutter'               " git gutter
-Plug 'skywind3000/asyncrun.vim'             " async vim script runner
+Plug 'vhda/verilog_systemverilog.vim'       " SystemVerilog support
 
-" JS / JSX support
-Plug 'pangloss/vim-javascript'
-Plug 'mxw/vim-jsx'
+Plug 'fcpg/vim-osc52'                       " Fix copy paste in ssh -> tmux -> vim
 
 call plug#end()
 " }}}
 "Colors and Fonts {{{
+
 syntax on     " Enable syntax hilighting
 colorscheme gruvbox
 set background=dark
 
-set guifont=DejaVu\ Sans\ Mono\ for\ Powerline:h11
+" Enable cursor line position tracking:
+set cursorline
+" Remove the underline from enabling cursorline:
+" highlight clear CursorLine
 " }}}
 "UI config {{{
 " Change cursor shape between insert and normal mode in iTerm2
@@ -57,7 +56,8 @@ set showcmd  " Show partial commands in the last line of the screen
 
 set lazyredraw  " dont redraw during macros (makes it go faster)
 
-set mouse=a  " Enable use of the mouse for all modes
+set mouse=a       " Enable use of the mouse for all modes
+set ttymouse=sgr  " Fix tmux screen too wide issue
 
 " Set the command window height to 2 lines, to avoid many cases of having to
 " press <Enter> to continue
@@ -74,7 +74,7 @@ set ruler     " Show line and column number in bottom ruler
 
 set number    " Show line numbers
 
-set nowrap   " Stop wrapping text god damnit
+set nowrap   " Stop wrapping text
 
 set laststatus=2     "always show the status bar
 
@@ -85,7 +85,7 @@ set modelines=1  " the first line can set vim settings (lets the indenting work 
 " }}}
 "Spaces, Tabs, and Indentation {{{
 set autoindent  "smarter indenting
-set smartindent
+" set smartindent
 filetype indent on
 filetype plugin on
 
@@ -117,13 +117,21 @@ set foldenable   " enable folding
 "set the leader
 let mapleader = "\<Space>"
 
+noremap <leader>y :call SendViaOSC52(getreg('"'))<cr>
+
 "leader f - alternate fold
 noremap <leader>f za
 
 "leader e v - Edit Vim.rc in a new vsplit
 noremap <leader>ev :vs $MYVIMRC<cr>
-"leader s v - Source Vim.rc
-noremap <leader>sv :so $MYVIMRC<cr> :AirlineRefresh<cr>
+"leader r v - Source Vim.rc
+noremap <leader>rv :so $MYVIMRC<cr> :AirlineRefresh<cr>
+
+"leader s e - sc edit this file
+noremap <leader>se :!sc edit <C-R>%<cr>
+
+"leader s d - sc diff this file
+noremap <leader>sd :!sc diff <C-R>%<cr>
 
 "leader b b - Buffer Back
 noremap <leader>bb :bp<cr>
@@ -131,6 +139,8 @@ noremap <leader>bb :bp<cr>
 noremap <leader>bn :bn<cr>
 "leader b d - Buffer Delete
 noremap <leader>bd :bd<cr>
+"leader b f - Buffer Find
+noremap <leader>bf :CtrlPBuffer<cr>
 
 "leader == - Fix whole file indentation
 noremap <leader>== gg=G''
@@ -147,9 +157,11 @@ imap <C-Space> <C-X><C-O>
 "insert mode jk - escape
 inoremap jk <esc>
 
-" Make side scrolling faster
+" Scroll with control-hjkl
 noremap <C-l> 10zl
 noremap <C-h> 10zh
+" noremap <C-j> 5<C-y>
+" noremap <C-k> 5<C-u>
 
 " Map <C-o> (redraw screen) to also turn off search highlighting until the next search
 nnoremap <C-o> :nohl<CR><C-L>
@@ -181,6 +193,8 @@ let g:indent_guides_start_level = 2
 
 set encoding=utf-8
 
+" let g:airline_powerline_fonts = 1
+
 let g:airline_theme='gruvbox'
 
 let g:airline_section_z='%p%%  %l: %c'
@@ -188,22 +202,33 @@ let g:airline#parts#ffenc#skip_expected_string='utf-8[unix]'
 let g:airline_skip_empty_sections = 1
 
 " Tabline
-let g:airline#extensions#tabline#enabled = 1
-let g:airline#extensions#tabline#left_sep = ' '
-let g:airline#extensions#tabline#left_alt_sep = '|'
+" let g:airline#extensions#tabline#enabled = 1
+" let g:airline#extensions#tabline#left_sep = ' '
+" let g:airline#extensions#tabline#left_alt_sep = '|'
+" let g:airline#extensions#tabline#buffer_idx_mode = 1
 
 "}}}
 "Ctrl P {{{
-let g:ctrlp_custom_ignore = 'node_modules\|platforms\|git'
 " add a keymap for leader p
 noremap <leader>p :CtrlP<cr>
+
+let g:ctrlp_user_command = 'ag %s -i --nocolor --nogroup --hidden -g ""'
+
+let g:ctrlp_max_files=0
+let g:ctrlp_max_depth=40
+" let g:ctrlp_regexp = 1
 "}}}
 "Delimate {{{
 let g:delimitMate_expand_cr = 1
 "}}}
-"Ale {{{
-let g:ale_linters = {'javascript': ['eslint']}
-"}}}
-"JS scripts {{{
-autocmd BufWritePost *.js AsyncRun -post=checktime ./node_modules/.bin/eslint --fix %
+
+"Ag {{{
+" The Silver Searcher
+if executable('ag')
+  " Use ag over grep
+  set grepprg=ag\ --nogroup\ --nocolor
+
+  " Use ag in CtrlP for listing files. Lightning fast and respects .gitignore
+  let g:ctrlp_user_command = 'ag %s -l --nocolor -g ""'
+endif
 "}}}
